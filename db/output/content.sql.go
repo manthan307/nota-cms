@@ -7,8 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createContent = `-- name: CreateContent :one
@@ -18,13 +18,13 @@ RETURNING id, schema_id, data, created_by, created_at, updated_at, deleted_at
 `
 
 type CreateContentParams struct {
-	SchemaID  sql.NullInt32
-	Data      json.RawMessage
-	CreatedBy sql.NullInt32
+	SchemaID  pgtype.Int4
+	Data      []byte
+	CreatedBy pgtype.Int4
 }
 
 func (q *Queries) CreateContent(ctx context.Context, arg CreateContentParams) (Content, error) {
-	row := q.db.QueryRowContext(ctx, createContent, arg.SchemaID, arg.Data, arg.CreatedBy)
+	row := q.db.QueryRow(ctx, createContent, arg.SchemaID, arg.Data, arg.CreatedBy)
 	var i Content
 	err := row.Scan(
 		&i.ID,
@@ -45,7 +45,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteContent(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteContent, id)
+	_, err := q.db.Exec(ctx, deleteContent, id)
 	return err
 }
 
@@ -56,8 +56,8 @@ AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetContentsBySchema(ctx context.Context, schemaID sql.NullInt32) ([]Content, error) {
-	rows, err := q.db.QueryContext(ctx, getContentsBySchema, schemaID)
+func (q *Queries) GetContentsBySchema(ctx context.Context, schemaID pgtype.Int4) ([]Content, error) {
+	rows, err := q.db.Query(ctx, getContentsBySchema, schemaID)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +77,6 @@ func (q *Queries) GetContentsBySchema(ctx context.Context, schemaID sql.NullInt3
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

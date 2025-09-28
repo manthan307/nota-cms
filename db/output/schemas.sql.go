@@ -7,24 +7,24 @@ package db
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createSchema = `-- name: CreateSchema :one
 INSERT INTO schemas (name, definition, created_by)
 VALUES ($1, $2, $3)
-RETURNING id, name, definition, created_by, created_at, deleted_at
+RETURNING id, name, definition, created_by, created_at, updated_at, deleted_at
 `
 
 type CreateSchemaParams struct {
 	Name       string
-	Definition json.RawMessage
-	CreatedBy  sql.NullInt32
+	Definition []byte
+	CreatedBy  pgtype.Int4
 }
 
 func (q *Queries) CreateSchema(ctx context.Context, arg CreateSchemaParams) (Schema, error) {
-	row := q.db.QueryRowContext(ctx, createSchema, arg.Name, arg.Definition, arg.CreatedBy)
+	row := q.db.QueryRow(ctx, createSchema, arg.Name, arg.Definition, arg.CreatedBy)
 	var i Schema
 	err := row.Scan(
 		&i.ID,
@@ -32,6 +32,7 @@ func (q *Queries) CreateSchema(ctx context.Context, arg CreateSchemaParams) (Sch
 		&i.Definition,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.DeletedAt,
 	)
 	return i, err
@@ -44,17 +45,17 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteSchema(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteSchema, id)
+	_, err := q.db.Exec(ctx, deleteSchema, id)
 	return err
 }
 
 const getSchemaByID = `-- name: GetSchemaByID :one
-SELECT id, name, definition, created_by, created_at, deleted_at FROM schemas
+SELECT id, name, definition, created_by, created_at, updated_at, deleted_at FROM schemas
 WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetSchemaByID(ctx context.Context, id int32) (Schema, error) {
-	row := q.db.QueryRowContext(ctx, getSchemaByID, id)
+	row := q.db.QueryRow(ctx, getSchemaByID, id)
 	var i Schema
 	err := row.Scan(
 		&i.ID,
@@ -62,18 +63,19 @@ func (q *Queries) GetSchemaByID(ctx context.Context, id int32) (Schema, error) {
 		&i.Definition,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getSchemaByName = `-- name: GetSchemaByName :one
-SELECT id, name, definition, created_by, created_at, deleted_at FROM schemas
+SELECT id, name, definition, created_by, created_at, updated_at, deleted_at FROM schemas
 WHERE name = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetSchemaByName(ctx context.Context, name string) (Schema, error) {
-	row := q.db.QueryRowContext(ctx, getSchemaByName, name)
+	row := q.db.QueryRow(ctx, getSchemaByName, name)
 	var i Schema
 	err := row.Scan(
 		&i.ID,
@@ -81,19 +83,20 @@ func (q *Queries) GetSchemaByName(ctx context.Context, name string) (Schema, err
 		&i.Definition,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const listSchemas = `-- name: ListSchemas :many
-SELECT id, name, definition, created_by, created_at, deleted_at FROM schemas
+SELECT id, name, definition, created_by, created_at, updated_at, deleted_at FROM schemas
 WHERE deleted_at IS NULL
 ORDER BY id
 `
 
 func (q *Queries) ListSchemas(ctx context.Context) ([]Schema, error) {
-	rows, err := q.db.QueryContext(ctx, listSchemas)
+	rows, err := q.db.Query(ctx, listSchemas)
 	if err != nil {
 		return nil, err
 	}
@@ -107,14 +110,12 @@ func (q *Queries) ListSchemas(ctx context.Context) ([]Schema, error) {
 			&i.Definition,
 			&i.CreatedBy,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

@@ -5,34 +5,35 @@
 package db
 
 import (
-	"database/sql"
-	"encoding/json"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Content struct {
 	ID        int32
-	SchemaID  sql.NullInt32
-	Data      json.RawMessage
-	CreatedBy sql.NullInt32
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
-	DeletedAt sql.NullTime
+	SchemaID  pgtype.Int4
+	Data      []byte
+	CreatedBy pgtype.Int4
+	CreatedAt pgtype.Timestamp
+	UpdatedAt pgtype.Timestamp
+	DeletedAt pgtype.Timestamp
 }
 
 type Schema struct {
 	ID         int32
 	Name       string
-	Definition json.RawMessage
-	CreatedBy  sql.NullInt32
-	CreatedAt  sql.NullTime
-	DeletedAt  sql.NullTime
+	Definition []byte
+	CreatedBy  pgtype.Int4
+	CreatedAt  pgtype.Timestamp
+	UpdatedAt  pgtype.Timestamp
+	DeletedAt  pgtype.Timestamp
 }
 
 type User struct {
 	ID           int32
-	Username     string
+	Email        string
 	PasswordHash string
 	Role         string
-	CreatedAt    sql.NullTime
-	DeletedAt    sql.NullTime
+	CreatedAt    pgtype.Timestamp
+	UpdatedAt    pgtype.Timestamp
+	DeletedAt    pgtype.Timestamp
 }

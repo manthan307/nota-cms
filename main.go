@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/manthan307/nota-cms/api"
 	v1 "github.com/manthan307/nota-cms/api/v1"
@@ -22,10 +25,18 @@ func main() {
 		fx.Provide(
 			logger.InitLogger,
 			postgres.Connect,
-			db.New,
+			func(pool *pgxpool.Pool) *db.Queries {
+				ctx := context.Background()
+				conn, err := pool.Acquire(ctx)
+				if err != nil {
+					panic(err)
+				}
+				return db.New(conn.Conn())
+			},
 			api.StartServer,
 		),
 		fx.Invoke(
+			postgres.RunMigrations,
 			v1.RegisterRoutes,
 		),
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {

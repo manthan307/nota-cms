@@ -10,26 +10,27 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, password_hash, role)
+INSERT INTO users (email, password_hash, role)
 VALUES ($1, $2, $3)
-RETURNING id, username, password_hash, role, created_at, deleted_at
+RETURNING id, email, password_hash, role, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
-	Username     string
+	Email        string
 	PasswordHash string
 	Role         string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Username, arg.PasswordHash, arg.Role)
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.PasswordHash, arg.Role)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
+		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.DeletedAt,
 	)
 	return i, err
@@ -42,38 +43,39 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteUser, id)
+	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
 }
 
-const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password_hash, role, created_at, deleted_at FROM users
-WHERE username = $1
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, password_hash, role, created_at, updated_at, deleted_at FROM users
+WHERE email = $1
 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByUsername, username)
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
+		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, password_hash, role, created_at, deleted_at FROM users
+SELECT id, email, password_hash, role, created_at, updated_at, deleted_at FROM users
 WHERE deleted_at IS NULL
 ORDER BY id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.QueryContext(ctx, listUsers)
+	rows, err := q.db.Query(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -83,18 +85,16 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.Username,
+			&i.Email,
 			&i.PasswordHash,
 			&i.Role,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
