@@ -1,0 +1,23 @@
+-- name: CreateSchema :one
+INSERT INTO schemas (name, definition, created_by)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: GetSchemaByID :one
+SELECT * FROM schemas
+WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: GetSchemaByName :one
+SELECT * FROM schemas
+WHERE name = $1 AND deleted_at IS NULL;
+
+-- name: ListSchemas :many
+SELECT * FROM schemas
+WHERE deleted_at IS NULL
+ORDER BY id;
+
+-- name: DeleteSchema :exec
+UPDATE schemas
+SET deleted_at = now()
+WHERE id = $1;
+
