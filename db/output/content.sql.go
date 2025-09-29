@@ -7,7 +7,9 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -18,9 +20,9 @@ RETURNING id, schema_id, data, created_by, created_at, updated_at, deleted_at
 `
 
 type CreateContentParams struct {
-	SchemaID  pgtype.Int4
-	Data      []byte
-	CreatedBy pgtype.Int4
+	SchemaID  pgtype.UUID
+	Data      json.RawMessage
+	CreatedBy pgtype.UUID
 }
 
 func (q *Queries) CreateContent(ctx context.Context, arg CreateContentParams) (Content, error) {
@@ -44,7 +46,7 @@ SET deleted_at = now()
 WHERE id = $1
 `
 
-func (q *Queries) DeleteContent(ctx context.Context, id int32) error {
+func (q *Queries) DeleteContent(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteContent, id)
 	return err
 }
@@ -56,7 +58,7 @@ AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetContentsBySchema(ctx context.Context, schemaID pgtype.Int4) ([]Content, error) {
+func (q *Queries) GetContentsBySchema(ctx context.Context, schemaID pgtype.UUID) ([]Content, error) {
 	rows, err := q.db.Query(ctx, getContentsBySchema, schemaID)
 	if err != nil {
 		return nil, err

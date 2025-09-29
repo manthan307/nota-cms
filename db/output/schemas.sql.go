@@ -7,7 +7,9 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -19,8 +21,8 @@ RETURNING id, name, definition, created_by, created_at, updated_at, deleted_at
 
 type CreateSchemaParams struct {
 	Name       string
-	Definition []byte
-	CreatedBy  pgtype.Int4
+	Definition json.RawMessage
+	CreatedBy  pgtype.UUID
 }
 
 func (q *Queries) CreateSchema(ctx context.Context, arg CreateSchemaParams) (Schema, error) {
@@ -44,7 +46,7 @@ SET deleted_at = now()
 WHERE id = $1
 `
 
-func (q *Queries) DeleteSchema(ctx context.Context, id int32) error {
+func (q *Queries) DeleteSchema(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteSchema, id)
 	return err
 }
@@ -54,7 +56,7 @@ SELECT id, name, definition, created_by, created_at, updated_at, deleted_at FROM
 WHERE id = $1 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetSchemaByID(ctx context.Context, id int32) (Schema, error) {
+func (q *Queries) GetSchemaByID(ctx context.Context, id uuid.UUID) (Schema, error) {
 	row := q.db.QueryRow(ctx, getSchemaByID, id)
 	var i Schema
 	err := row.Scan(
@@ -121,4 +123,32 @@ func (q *Queries) ListSchemas(ctx context.Context) ([]Schema, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSchema = `-- name: UpdateSchema :one
+UPDATE schemas
+SET name = $2, definition = $3, updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, name, definition, created_by, created_at, updated_at, deleted_at
+`
+
+type UpdateSchemaParams struct {
+	ID         uuid.UUID
+	Name       string
+	Definition json.RawMessage
+}
+
+func (q *Queries) UpdateSchema(ctx context.Context, arg UpdateSchemaParams) (Schema, error) {
+	row := q.db.QueryRow(ctx, updateSchema, arg.ID, arg.Name, arg.Definition)
+	var i Schema
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Definition,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }

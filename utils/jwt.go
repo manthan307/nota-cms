@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 var jwtSecret []byte
@@ -17,7 +18,7 @@ func Init() {
 	jwtSecret = []byte(secret)
 }
 
-func GenerateJWT(userID int, role string) (string, error) {
+func GenerateJWT(userID uuid.UUID, role string) (string, error) {
 	Init()
 	claims := jwt.MapClaims{
 		"user_id": userID,
@@ -26,4 +27,14 @@ func GenerateJWT(userID int, role string) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
+}
+
+func VerifyJWT(tokenString string) (*jwt.Token, error) {
+	Init()
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return jwtSecret, nil
+	})
 }

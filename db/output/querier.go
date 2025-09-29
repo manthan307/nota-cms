@@ -7,6 +7,7 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -14,15 +15,17 @@ type Querier interface {
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateSchema(ctx context.Context, arg CreateSchemaParams) (Schema, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	DeleteContent(ctx context.Context, id int32) error
-	DeleteSchema(ctx context.Context, id int32) error
-	DeleteUser(ctx context.Context, id int32) error
-	GetContentsBySchema(ctx context.Context, schemaID pgtype.Int4) ([]Content, error)
-	GetSchemaByID(ctx context.Context, id int32) (Schema, error)
+	DeleteContent(ctx context.Context, id uuid.UUID) error
+	DeleteSchema(ctx context.Context, id uuid.UUID) error
+	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetContentsBySchema(ctx context.Context, schemaID pgtype.UUID) ([]Content, error)
+	GetSchemaByID(ctx context.Context, id uuid.UUID) (Schema, error)
 	GetSchemaByName(ctx context.Context, name string) (Schema, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	ListSchemas(ctx context.Context) ([]Schema, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	UpdateSchema(ctx context.Context, arg UpdateSchemaParams) (Schema, error)
+	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 var _ Querier = (*Queries)(nil)

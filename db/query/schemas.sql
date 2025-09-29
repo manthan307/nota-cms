@@ -21,3 +21,8 @@ UPDATE schemas
 SET deleted_at = now()
 WHERE id = $1;
 
+-- name: UpdateSchema :one
+UPDATE schemas
+SET name = $2, definition = $3, updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING *;

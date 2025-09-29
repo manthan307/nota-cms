@@ -5,35 +5,38 @@
 package db
 
 import (
+	"encoding/json"
+
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Content struct {
-	ID        int32
-	SchemaID  pgtype.Int4
-	Data      []byte
-	CreatedBy pgtype.Int4
-	CreatedAt pgtype.Timestamp
-	UpdatedAt pgtype.Timestamp
-	DeletedAt pgtype.Timestamp
+	ID        uuid.UUID
+	SchemaID  pgtype.UUID
+	Data      json.RawMessage
+	CreatedBy pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
 }
 
 type Schema struct {
-	ID         int32
+	ID         uuid.UUID
 	Name       string
-	Definition []byte
-	CreatedBy  pgtype.Int4
-	CreatedAt  pgtype.Timestamp
-	UpdatedAt  pgtype.Timestamp
-	DeletedAt  pgtype.Timestamp
+	Definition json.RawMessage
+	CreatedBy  pgtype.UUID
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
 }
 
 type User struct {
-	ID           int32
+	ID           uuid.UUID
 	Email        string
 	PasswordHash string
 	Role         string
-	CreatedAt    pgtype.Timestamp
-	UpdatedAt    pgtype.Timestamp
-	DeletedAt    pgtype.Timestamp
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
 }
