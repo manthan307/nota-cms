@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/manthan307/nota-cms/db/output"
+	"github.com/manthan307/nota-cms/utils"
 	"go.uber.org/zap"
 )
 
@@ -23,6 +24,12 @@ func SchemasCreateHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler
 
 		if body.Name == "" || len(body.Defination) == 0 {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name and definition are required"})
+		}
+
+		ok, err := utils.CheckTypes(body.Defination)
+		if !ok {
+			logger.Error("invalid definition", zap.Error(err))
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid definition: " + err.Error()})
 		}
 
 		claims := c.Locals("claims").(jwt.MapClaims)
