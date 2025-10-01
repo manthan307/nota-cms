@@ -15,6 +15,7 @@ type Content struct {
 	ID        uuid.UUID
 	SchemaID  pgtype.UUID
 	Data      json.RawMessage
+	Published pgtype.Bool
 	CreatedBy pgtype.UUID
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz

@@ -9,7 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
-func ProtectedRoute(logger *zap.Logger, queries *db.Queries) fiber.Handler {
+var roleHierarchy = map[string]int{
+	"viewer": 1,
+	"editor": 2,
+	"admin":  3,
+}
+
+func ProtectedRoute(logger *zap.Logger, queries *db.Queries, privilage string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		tokenStr := c.Cookies("token")
 		if tokenStr == "" {
@@ -48,6 +54,19 @@ func ProtectedRoute(logger *zap.Logger, queries *db.Queries) fiber.Handler {
 
 		if !exists {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user does not exist"})
+		}
+
+		//get role
+		role, ok := claims["role"].(string)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid role"})
+		}
+
+		requiredLevel := roleHierarchy[privilage]
+		userLevel := roleHierarchy[role]
+
+		if userLevel < requiredLevel {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 		}
 
 		// Attach claims for downstream handlers

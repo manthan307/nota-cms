@@ -3,6 +3,7 @@ package v1
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/manthan307/nota-cms/api/v1/auth"
+	"github.com/manthan307/nota-cms/api/v1/content"
 	schemasRoutes "github.com/manthan307/nota-cms/api/v1/schemas"
 	db "github.com/manthan307/nota-cms/db/output"
 	"go.uber.org/zap"
@@ -17,8 +18,15 @@ func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger) {
 	v1.Post("/auth/login", auth.LoginHandler(queries, logger))
 
 	//schemas
-	schemas := v1.Group("/schemas", auth.ProtectedRoute(logger, queries))
-	schemas.Post("/create", schemasRoutes.SchemasCreateHandler(queries, logger))
-	schemas.Post("/get_by_id/:id", schemasRoutes.GetSchemaByID(queries, logger))
-	schemas.Post("/get_by_name/:name", schemasRoutes.GetSchemaByName(queries, logger))
+	schemas := v1.Group("/schemas")
+	schemas.Post("/create", auth.ProtectedRoute(logger, queries, "editor"), schemasRoutes.SchemasCreateHandler(queries, logger))
+	schemas.Post("/get_by_id/:id", auth.ProtectedRoute(logger, queries, "viewer"), schemasRoutes.GetSchemaByID(queries, logger))
+	schemas.Post("/get_by_name/:name", auth.ProtectedRoute(logger, queries, "viewer"), schemasRoutes.GetSchemaByName(queries, logger))
+
+	//content
+	contentRoute := v1.Group("/content")
+	contentRoute.Post("/create", auth.ProtectedRoute(logger, queries, "editor"), content.CreateContentHandler(queries, logger))
+	contentRoute.Post("/delete/:id", auth.ProtectedRoute(logger, queries, "editor"), content.DeleteContentHandler(queries, logger))
+	contentRoute.Post("/get/:id", content.GetContentHandler(queries, logger))
+	contentRoute.Post("/get_all/:schema_name", content.GetAllContentsBySchemaHandler(queries, logger, true))
 }

@@ -54,3 +54,86 @@ func CheckTypes(data []byte) (bool, error) {
 	}
 	return true, nil
 }
+
+func CompareSchemaWithData(schemaDef []byte, data map[string]interface{}) (bool, error) {
+	// Unmarshal schema definition
+	var schema map[string]interface{}
+	if err := json.Unmarshal(schemaDef, &schema); err != nil {
+		return false, fmt.Errorf("invalid schema JSON: %w", err)
+	}
+
+	// Check for missing fields
+	for key, schemaVal := range schema {
+		val, exists := data[key]
+		if !exists {
+			return false, fmt.Errorf("missing required field %q", key)
+		}
+
+		if err := matchType(schemaVal, val); err != nil {
+			return false, fmt.Errorf("field %q: %w", key, err)
+		}
+	}
+
+	// Check for extra fields
+	for key := range data {
+		if _, exists := schema[key]; !exists {
+			return false, fmt.Errorf("field %q not defined in schema", key)
+		}
+	}
+
+	return true, nil
+}
+
+func matchType(schemaVal interface{}, value interface{}) error {
+	switch t := schemaVal.(type) {
+	case string:
+		// primitive type
+		if !isPrimitiveTypeMatching(t, value) {
+			return fmt.Errorf("expected %s, got %T", t, value)
+		}
+	case []interface{}:
+		// array type
+		arr, ok := value.([]interface{})
+		if !ok {
+			return fmt.Errorf("expected array, got %T", value)
+		}
+		if len(t) == 0 {
+			return nil // empty schema array, accept any type?
+		}
+		// assume all elements must match first element type
+		elemTypeStr, ok := t[0].(string)
+		if !ok {
+			return fmt.Errorf("invalid schema array type: %v", t[0])
+		}
+		for i, item := range arr {
+			if !isPrimitiveTypeMatching(elemTypeStr, item) {
+				return fmt.Errorf("element %d: expected %s, got %T", i, elemTypeStr, item)
+			}
+		}
+	default:
+		return fmt.Errorf("unsupported schema type %T", t)
+	}
+	return nil
+}
+
+func isPrimitiveTypeMatching(expectedType string, value interface{}) bool {
+	switch expectedType {
+	case "text", "string", "richtext":
+		_, ok := value.(string)
+		return ok
+	case "number":
+		_, ok := value.(float64)
+		return ok
+	case "boolean":
+		_, ok := value.(bool)
+		return ok
+	case "json":
+		_, ok := value.(map[string]interface{})
+		return ok
+	case "file", "image", "video":
+		_, ok := value.(string)
+		return ok
+	default:
+		return false
+	}
+}

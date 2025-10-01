@@ -14,24 +14,31 @@ import (
 )
 
 const createContent = `-- name: CreateContent :one
-INSERT INTO contents (schema_id, data, created_by)
-VALUES ($1, $2, $3)
-RETURNING id, schema_id, data, created_by, created_at, updated_at, deleted_at
+INSERT INTO contents (schema_id, data, created_by,published)
+VALUES ($1, $2, $3,$4)
+RETURNING id, schema_id, data, published, created_by, created_at, updated_at, deleted_at
 `
 
 type CreateContentParams struct {
 	SchemaID  pgtype.UUID
 	Data      json.RawMessage
 	CreatedBy pgtype.UUID
+	Published pgtype.Bool
 }
 
 func (q *Queries) CreateContent(ctx context.Context, arg CreateContentParams) (Content, error) {
-	row := q.db.QueryRow(ctx, createContent, arg.SchemaID, arg.Data, arg.CreatedBy)
+	row := q.db.QueryRow(ctx, createContent,
+		arg.SchemaID,
+		arg.Data,
+		arg.CreatedBy,
+		arg.Published,
+	)
 	var i Content
 	err := row.Scan(
 		&i.ID,
 		&i.SchemaID,
 		&i.Data,
+		&i.Published,
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -51,10 +58,67 @@ func (q *Queries) DeleteContent(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getAllContents = `-- name: GetAllContents :many
+SELECT id, schema_id, data, published, created_by, created_at, updated_at, deleted_at FROM contents
+WHERE deleted_at IS NULL
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAllContents(ctx context.Context) ([]Content, error) {
+	rows, err := q.db.Query(ctx, getAllContents)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Content
+	for rows.Next() {
+		var i Content
+		if err := rows.Scan(
+			&i.ID,
+			&i.SchemaID,
+			&i.Data,
+			&i.Published,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getContentByID = `-- name: GetContentByID :one
+SELECT id, schema_id, data, published, created_by, created_at, updated_at, deleted_at FROM contents
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetContentByID(ctx context.Context, id uuid.UUID) (Content, error) {
+	row := q.db.QueryRow(ctx, getContentByID, id)
+	var i Content
+	err := row.Scan(
+		&i.ID,
+		&i.SchemaID,
+		&i.Data,
+		&i.Published,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getContentsBySchema = `-- name: GetContentsBySchema :many
-SELECT id, schema_id, data, created_by, created_at, updated_at, deleted_at FROM contents
+SELECT id, schema_id, data, published, created_by, created_at, updated_at, deleted_at FROM contents
 WHERE schema_id = $1
 AND deleted_at IS NULL
+AND published = true
 ORDER BY created_at DESC
 `
 
@@ -71,6 +135,7 @@ func (q *Queries) GetContentsBySchema(ctx context.Context, schemaID pgtype.UUID)
 			&i.ID,
 			&i.SchemaID,
 			&i.Data,
+			&i.Published,
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -84,4 +149,60 @@ func (q *Queries) GetContentsBySchema(ctx context.Context, schemaID pgtype.UUID)
 		return nil, err
 	}
 	return items, nil
+}
+
+const setContentPublished = `-- name: SetContentPublished :one
+UPDATE contents
+SET published = $2, updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, schema_id, data, published, created_by, created_at, updated_at, deleted_at
+`
+
+type SetContentPublishedParams struct {
+	ID        uuid.UUID
+	Published pgtype.Bool
+}
+
+func (q *Queries) SetContentPublished(ctx context.Context, arg SetContentPublishedParams) (Content, error) {
+	row := q.db.QueryRow(ctx, setContentPublished, arg.ID, arg.Published)
+	var i Content
+	err := row.Scan(
+		&i.ID,
+		&i.SchemaID,
+		&i.Data,
+		&i.Published,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updateContent = `-- name: UpdateContent :one
+UPDATE contents
+SET data = $2, updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, schema_id, data, published, created_by, created_at, updated_at, deleted_at
+`
+
+type UpdateContentParams struct {
+	ID   uuid.UUID
+	Data json.RawMessage
+}
+
+func (q *Queries) UpdateContent(ctx context.Context, arg UpdateContentParams) (Content, error) {
+	row := q.db.QueryRow(ctx, updateContent, arg.ID, arg.Data)
+	var i Content
+	err := row.Scan(
+		&i.ID,
+		&i.SchemaID,
+		&i.Data,
+		&i.Published,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }

@@ -25,3 +25,9 @@ SELECT EXISTS (
     AND deleted_at IS NULL
 ) AS exists;
 
+-- name: AdminExists :one
+SELECT EXISTS (
+    SELECT 1 FROM users
+    WHERE role = 'admin'
+    AND deleted_at IS NULL
+) AS exists;

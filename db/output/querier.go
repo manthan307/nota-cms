@@ -12,18 +12,23 @@ import (
 )
 
 type Querier interface {
+	AdminExists(ctx context.Context) (bool, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateSchema(ctx context.Context, arg CreateSchemaParams) (Schema, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteContent(ctx context.Context, id uuid.UUID) error
 	DeleteSchema(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetAllContents(ctx context.Context) ([]Content, error)
+	GetContentByID(ctx context.Context, id uuid.UUID) (Content, error)
 	GetContentsBySchema(ctx context.Context, schemaID pgtype.UUID) ([]Content, error)
 	GetSchemaByID(ctx context.Context, id uuid.UUID) (Schema, error)
 	GetSchemaByName(ctx context.Context, name string) (Schema, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	ListSchemas(ctx context.Context) ([]Schema, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	SetContentPublished(ctx context.Context, arg SetContentPublishedParams) (Content, error)
+	UpdateContent(ctx context.Context, arg UpdateContentParams) (Content, error)
 	UpdateSchema(ctx context.Context, arg UpdateSchemaParams) (Schema, error)
 	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
 }

@@ -14,6 +14,17 @@ func RegisterHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 	env := os.Getenv("ENV")
 
 	return func(c *fiber.Ctx) error {
+
+		exist, err := queries.AdminExists(c.Context())
+		if err != nil {
+			logger.Error("failed to check admin existence", zap.Error(err))
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+		}
+
+		if exist {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "admin already exists"})
+		}
+
 		var body struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`

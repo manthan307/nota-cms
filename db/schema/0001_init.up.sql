@@ -60,6 +60,7 @@ CREATE TABLE contents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     schema_id UUID REFERENCES schemas(id) ON DELETE CASCADE,
     data JSONB NOT NULL,
+    published BOOLEAN DEFAULT FALSE,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
