@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/manthan307/nota-cms/api/v1/auth"
 	"github.com/manthan307/nota-cms/api/v1/content"
+	"github.com/manthan307/nota-cms/api/v1/media"
 	schemasRoutes "github.com/manthan307/nota-cms/api/v1/schemas"
 	db "github.com/manthan307/nota-cms/db/output"
 	"go.uber.org/zap"
@@ -29,4 +30,8 @@ func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger) {
 	contentRoute.Post("/delete/:id", auth.ProtectedRoute(logger, queries, "editor"), content.DeleteContentHandler(queries, logger))
 	contentRoute.Post("/get/:id", content.GetContentHandler(queries, logger))
 	contentRoute.Post("/get_all/:schema_name", content.GetAllContentsBySchemaHandler(queries, logger, true))
+
+	//media
+	mediaRoute := v1.Group("/media")
+	mediaRoute.Post("/upload", auth.ProtectedRoute(logger, queries, "editor"), media.UploadMediaHandler(queries, logger))
 }

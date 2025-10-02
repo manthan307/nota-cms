@@ -74,3 +74,15 @@ EXECUTE FUNCTION update_updated_at_column();
 
 -- Index for quick access by content ID
 CREATE INDEX idx_contents_id ON contents(id);
+
+CREATE TABLE media (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key TEXT NOT NULL,                         -- object key in S3
+    url TEXT NOT NULL,                         -- presigned or public URL
+    bucket TEXT NOT NULL,                      -- bucket name
+    type TEXT NOT NULL CHECK (type IN ('image','video','file')),
+    uploaded_by UUID REFERENCES users(id),     -- who uploaded it
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    deleted_at TIMESTAMPTZ NULL
+);

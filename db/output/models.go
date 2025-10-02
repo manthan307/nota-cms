@@ -22,6 +22,18 @@ type Content struct {
 	DeletedAt pgtype.Timestamptz
 }
 
+type Medium struct {
+	ID         uuid.UUID
+	Key        string
+	Url        string
+	Bucket     string
+	Type       string
+	UploadedBy pgtype.UUID
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
+}
+
 type Schema struct {
 	ID         uuid.UUID
 	Name       string
