@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime/multipart"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -60,7 +61,10 @@ func UploadMediaHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "storage not available"})
 		}
 
-		bucket := "test"
+		bucket := os.Getenv("MINIO_BUCKET_NAME")
+		if bucket == "" {
+			bucket = "media"
+		}
 		ctx := context.Background()
 
 		// Ensure bucket exists

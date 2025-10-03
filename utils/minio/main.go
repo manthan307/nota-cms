@@ -8,7 +8,42 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
 )
+
+func InitBucket(logger *zap.Logger) {
+	minioClient, err := InitS3()
+	if err != nil {
+		logger.Fatal("❌ failed to initialize minio client:", zap.Error(err))
+	}
+
+	bucket_name := os.Getenv("MINIO_BUCKET_NAME")
+	if bucket_name == "" {
+		bucket_name = "media"
+	}
+
+	err = EnsureBucket(minioClient, bucket_name)
+	if err != nil {
+		logger.Fatal("❌ failed to ensure bucket:", zap.Error(err))
+	}
+
+	policy := `{
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Action": ["s3:GetObject"],
+                "Resource": ["arn:aws:s3:::` + bucket_name + `/*"]
+            }
+        ]
+    }`
+
+	err = minioClient.SetBucketPolicy(context.Background(), bucket_name, policy)
+	if err != nil {
+		logger.Fatal("❌ failed to set bucket policy:", zap.Error(err))
+	}
+}
 
 func InitS3() (*minio.Client, error) {
 	user := os.Getenv("MINIO_ROOT_USER")

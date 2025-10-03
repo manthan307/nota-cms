@@ -10,6 +10,7 @@ import (
 	postgres "github.com/manthan307/nota-cms/db"
 	db "github.com/manthan307/nota-cms/db/output"
 	"github.com/manthan307/nota-cms/logger"
+	"github.com/manthan307/nota-cms/utils/minio"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -38,6 +39,7 @@ func main() {
 		fx.Invoke(
 			postgres.RunMigrations,
 			v1.RegisterRoutes,
+			minio.InitBucket,
 		),
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
