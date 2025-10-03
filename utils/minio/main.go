@@ -11,9 +11,14 @@ import (
 )
 
 func InitS3() (*minio.Client, error) {
+	user := os.Getenv("MINIO_ROOT_USER")
+	password := os.Getenv("MINIO_ROOT_PASSWORD")
+	// Initialize minio client object.
 	minioClient, err := minio.New("localhost:9000", &minio.Options{
-		Creds:  credentials.NewStaticV4("minioadmin", "minioadmin123", ""),
-		Secure: false, // set true if using HTTPS
+		Creds:        credentials.NewStaticV4(user, password, ""),
+		Secure:       false, // set true if using HTTPS
+		BucketLookup: minio.BucketLookupAuto,
+		Region:       "us-east-1",
 	})
 
 	if err != nil {
@@ -23,25 +28,21 @@ func InitS3() (*minio.Client, error) {
 	return minioClient, nil
 }
 
-func EnsureBucket(minioClient *minio.Client, bucket string) error {
+func EnsureBucket(minioClient *minio.Client, bucketName string) error {
 	ctx := context.Background()
 
-	// Check if the bucket exists
-	exists, err := minioClient.BucketExists(ctx, bucket)
+	err := minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
-		return fmt.Errorf("failed to check if bucket exists: %v", err)
-	}
-
-	if !exists {
-		// Create the bucket
-		err = minioClient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to create bucket: %v", err)
+		// Check to see if we already own this bucket (which happens if you run this twice)
+		exists, errBucketExists := minioClient.BucketExists(ctx, bucketName)
+		if errBucketExists == nil && exists {
+			return nil
+		} else {
+			return err
 		}
+	} else {
 		return nil
 	}
-
-	return nil
 }
 
 func UploadFile(minioClient *minio.Client, bucket, key, filepath string) (minio.UploadInfo, error) {
