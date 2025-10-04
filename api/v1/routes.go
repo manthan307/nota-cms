@@ -7,10 +7,11 @@ import (
 	"github.com/manthan307/nota-cms/api/v1/media"
 	schemasRoutes "github.com/manthan307/nota-cms/api/v1/schemas"
 	db "github.com/manthan307/nota-cms/db/output"
+	"github.com/minio/minio-go/v7"
 	"go.uber.org/zap"
 )
 
-func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger) {
+func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger, minioClient *minio.Client) {
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
@@ -33,5 +34,5 @@ func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger) {
 
 	//media
 	mediaRoute := v1.Group("/media")
-	mediaRoute.Post("/upload", auth.ProtectedRoute(logger, queries, "editor"), media.UploadMediaHandler(queries, logger))
+	mediaRoute.Post("/upload", auth.ProtectedRoute(logger, queries, "editor"), media.UploadMediaHandler(queries, logger, minioClient))
 }

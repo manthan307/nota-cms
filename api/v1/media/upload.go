@@ -15,19 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/manthan307/nota-cms/db/output"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.uber.org/zap"
 )
 
-// Configure MinIO/S3 client
-func newMinioClient() (*minio.Client, error) {
-	return minio.New("localhost:9000", &minio.Options{
-		Creds:  credentials.NewStaticV4("minioadmin", "minioadmin", ""),
-		Secure: false, // set true if using HTTPS
-	})
-}
-
-func UploadMediaHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
+func UploadMediaHandler(queries *db.Queries, logger *zap.Logger, minioClient *minio.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		//get user id
 		userID := c.Locals("claims").(jwt.MapClaims)["user_id"].(string)
@@ -53,13 +44,6 @@ func UploadMediaHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot open file"})
 		}
 		defer file.Close()
-
-		// Init MinIO client
-		minioClient, err := newMinioClient()
-		if err != nil {
-			logger.Error("Error creating MinIO client", zap.Error(err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "storage not available"})
-		}
 
 		bucket := os.Getenv("MINIO_BUCKET_NAME")
 		if bucket == "" {
@@ -97,8 +81,8 @@ func UploadMediaHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "upload failed"})
 		}
 
-		// Construct URL (depends on how your S3/MinIO is exposed)
-		fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucket, objectKey)
+		// Construct URL
+		fileURL := fmt.Sprintf("http://%s/%s/%s", os.Getenv("MINIO_ENDPOINT"), bucket, objectKey)
 
 		// Save metadata in DB
 		media, err := queries.CreateMedia(ctx, db.CreateMediaParams{

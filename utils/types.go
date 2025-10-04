@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 var Types = []string{
@@ -14,31 +15,27 @@ var Types = []string{
 	"file",
 	"image",
 	"video",
-	// "audio",
 	"richtext",
 }
 
 func CheckTypes(data []byte) (bool, error) {
-	// Unmarshal into generic map
 	var def map[string]interface{}
 	if err := json.Unmarshal(data, &def); err != nil {
 		return false, fmt.Errorf("invalid JSON: %w", err)
 	}
 
-	// Build a quick lookup map for Types
 	typeSet := make(map[string]struct{}, len(Types))
 	for _, t := range Types {
 		typeSet[t] = struct{}{}
 	}
 
-	// Validate each field
 	for key, val := range def {
 		switch v := val.(type) {
 		case string:
 			if _, ok := typeSet[v]; !ok {
 				return false, fmt.Errorf("invalid type for %q: %s", key, v)
 			}
-		case []interface{}: // if it's an array of strings
+		case []interface{}:
 			for _, item := range v {
 				if s, ok := item.(string); ok {
 					if _, found := typeSet[s]; !found {
@@ -56,13 +53,11 @@ func CheckTypes(data []byte) (bool, error) {
 }
 
 func CompareSchemaWithData(schemaDef []byte, data map[string]interface{}) (bool, error) {
-	// Unmarshal schema definition
 	var schema map[string]interface{}
 	if err := json.Unmarshal(schemaDef, &schema); err != nil {
 		return false, fmt.Errorf("invalid schema JSON: %w", err)
 	}
 
-	// Check for missing fields
 	for key, schemaVal := range schema {
 		val, exists := data[key]
 		if !exists {
@@ -74,7 +69,6 @@ func CompareSchemaWithData(schemaDef []byte, data map[string]interface{}) (bool,
 		}
 	}
 
-	// Check for extra fields
 	for key := range data {
 		if _, exists := schema[key]; !exists {
 			return false, fmt.Errorf("field %q not defined in schema", key)
@@ -87,20 +81,17 @@ func CompareSchemaWithData(schemaDef []byte, data map[string]interface{}) (bool,
 func matchType(schemaVal interface{}, value interface{}) error {
 	switch t := schemaVal.(type) {
 	case string:
-		// primitive type
 		if !isPrimitiveTypeMatching(t, value) {
 			return fmt.Errorf("expected %s, got %T", t, value)
 		}
 	case []interface{}:
-		// array type
 		arr, ok := value.([]interface{})
 		if !ok {
 			return fmt.Errorf("expected array, got %T", value)
 		}
 		if len(t) == 0 {
-			return nil // empty schema array, accept any type?
+			return nil
 		}
-		// assume all elements must match first element type
 		elemTypeStr, ok := t[0].(string)
 		if !ok {
 			return fmt.Errorf("invalid schema array type: %v", t[0])
@@ -130,9 +121,17 @@ func isPrimitiveTypeMatching(expectedType string, value interface{}) bool {
 	case "json":
 		_, ok := value.(map[string]interface{})
 		return ok
-	case "file", "image", "video":
+	case "file":
 		_, ok := value.(string)
 		return ok
+	case "image", "video":
+		str, ok := value.(string)
+		if !ok {
+			return false
+		}
+		// Validate URL format for media types
+		u, err := url.ParseRequestURI(str)
+		return err == nil && u.Scheme != "" && u.Host != ""
 	default:
 		return false
 	}

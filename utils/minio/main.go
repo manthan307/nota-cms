@@ -1,4 +1,4 @@
-package minio
+package minio_pkg
 
 import (
 	"context"
@@ -11,18 +11,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func InitBucket(logger *zap.Logger) {
-	minioClient, err := InitS3()
-	if err != nil {
-		logger.Fatal("❌ failed to initialize minio client:", zap.Error(err))
-	}
-
+func InitBucket(logger *zap.Logger, minioClient *minio.Client) {
 	bucket_name := os.Getenv("MINIO_BUCKET_NAME")
+	println(bucket_name)
 	if bucket_name == "" {
 		bucket_name = "media"
 	}
 
-	err = EnsureBucket(minioClient, bucket_name)
+	err := EnsureBucket(minioClient, bucket_name)
 	if err != nil {
 		logger.Fatal("❌ failed to ensure bucket:", zap.Error(err))
 	}
@@ -45,28 +41,33 @@ func InitBucket(logger *zap.Logger) {
 	}
 }
 
-func InitS3() (*minio.Client, error) {
-	user := os.Getenv("MINIO_ROOT_USER")
-	password := os.Getenv("MINIO_ROOT_PASSWORD")
-	// Initialize minio client object.
-	minioClient, err := minio.New("localhost:9000", &minio.Options{
+func InitS3(logger *zap.Logger) *minio.Client {
+	user := os.Getenv("MINIO_ACCESS_KEY")
+	password := os.Getenv("MINIO_SECRET_KEY")
+	host := os.Getenv("MINIO_ENDPOINT")
+	useSSL := os.Getenv("MINIO_USE_SSL")
+	region := os.Getenv("MINIO_REGION")
+	minioClient, err := minio.New(host, &minio.Options{
 		Creds:        credentials.NewStaticV4(user, password, ""),
-		Secure:       false, // set true if using HTTPS
+		Secure:       (useSSL == "true"), // set true if using HTTPS
 		BucketLookup: minio.BucketLookupAuto,
-		Region:       "us-east-1",
+		Region:       region,
 	})
 
 	if err != nil {
-		return nil, err
+		logger.Fatal("Fail connecting to Minio", zap.Error(err))
 	}
 
-	return minioClient, nil
+	InitBucket(logger, minioClient)
+
+	return minioClient
 }
 
 func EnsureBucket(minioClient *minio.Client, bucketName string) error {
 	ctx := context.Background()
+	region := os.Getenv("MINIO_REGION")
 
-	err := minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
+	err := minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: region})
 	if err != nil {
 		// Check to see if we already own this bucket (which happens if you run this twice)
 		exists, errBucketExists := minioClient.BucketExists(ctx, bucketName)
