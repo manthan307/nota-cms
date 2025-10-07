@@ -24,6 +24,8 @@ func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger, min
 	schemas.Post("/create", auth.ProtectedRoute(logger, queries, "editor"), schemasRoutes.SchemasCreateHandler(queries, logger))
 	schemas.Post("/get_by_id/:id", auth.ProtectedRoute(logger, queries, "viewer"), schemasRoutes.GetSchemaByID(queries, logger))
 	schemas.Post("/get_by_name/:name", auth.ProtectedRoute(logger, queries, "viewer"), schemasRoutes.GetSchemaByName(queries, logger))
+	schemas.Post("/list", auth.ProtectedRoute(logger, queries, "viewer"), schemasRoutes.ListSchemas(queries, logger))
+	schemas.Post("/delete/:id", auth.ProtectedRoute(logger, queries, "editor"), schemasRoutes.DeleteSchema(queries, logger))
 
 	//content
 	contentRoute := v1.Group("/content")
