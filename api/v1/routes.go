@@ -37,4 +37,5 @@ func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger, min
 	//media
 	mediaRoute := v1.Group("/media")
 	mediaRoute.Post("/upload", auth.ProtectedRoute(logger, queries, "editor"), media.UploadMediaHandler(queries, logger, minioClient))
+	mediaRoute.Post("/delete", auth.ProtectedRoute(logger, queries, "editor"), media.DeleteMediaHandler(queries, logger, minioClient))
 }
