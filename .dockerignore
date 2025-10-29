@@ -1,0 +1,36 @@
+sqlc.yaml
+sqlc.exe
+.vscode/
+.env
+.gitignore
+Dockerfile
+docker-compose.yml
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+# Vendor
+vendor/
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+# OS files
+.DS_Store
+Thumbs.db
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+# Dependency directories
+/node_modules

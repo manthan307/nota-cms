@@ -9,6 +9,7 @@ import {
   Inbox,
   Search,
   Sparkles,
+  User,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -36,9 +37,9 @@ const data = {
       icon: Inbox,
     },
     {
-      title: "Media",
+      title: "Users",
       url: "#",
-      icon: Image,
+      icon: User,
     },
   ],
 };

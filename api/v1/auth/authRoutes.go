@@ -25,10 +25,10 @@ func RegisterHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "admin already exists"})
 		}
 
+		Role := "admin"
 		var body struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`
-			Role     string `json:"role"`
 		}
 		if err := c.BodyParser(&body); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid body"})
@@ -43,7 +43,7 @@ func RegisterHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 		user, err := queries.CreateUser(c.Context(), db.CreateUserParams{
 			Email:        body.Email,
 			PasswordHash: hash,
-			Role:         body.Role,
+			Role:         Role,
 		})
 		if err != nil {
 			logger.Error("failed to create user", zap.Error(err))
