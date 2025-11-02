@@ -1,3 +1,4 @@
+"use client";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
@@ -11,8 +12,21 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { fetch } from "@/lib/instance";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Page() {
+  const router = useRouter();
+  useEffect(() => {
+    (async () => {
+      const res = await fetch.post("/api/v1/auth/verify");
+
+      if (!res.data.auth) {
+        router.replace("/login");
+      }
+    })();
+  }, []);
   return (
     <SidebarProvider>
       <AppSidebar />
