@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	db "github.com/manthan307/nota-cms/db/output"
 	"github.com/manthan307/nota-cms/utils"
 	"go.uber.org/zap"
@@ -117,7 +118,7 @@ func LoginHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 	}
 }
 
-func CheckAuthHandler() fiber.Handler {
+func CheckAuthHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		tokenStr := c.Cookies("token")
 
@@ -136,10 +137,29 @@ func CheckAuthHandler() fiber.Handler {
 		}
 
 		role, _ := claims["role"].(string)
+		userIDStr, ok := claims["user_id"].(string)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid user_id"})
+		}
+
+		// Convert to UUID
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid user_id format"})
+		}
+
+		user, err := queries.GetUserByID(c.Context(), userID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+		}
 
 		return c.Status(200).JSON(fiber.Map{
 			"auth": true,
-			"role": role,
+			"user": fiber.Map{
+				"id":    user.ID,
+				"email": user.Email,
+				"role":  role,
+			},
 		})
 	}
 }

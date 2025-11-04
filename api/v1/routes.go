@@ -18,7 +18,7 @@ func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger, min
 	//auth
 	v1.Post("/auth/register", auth.RegisterHandler(queries, logger))
 	v1.Post("/auth/login", auth.LoginHandler(queries, logger))
-	v1.Post("/auth/verify", auth.CheckAuthHandler())
+	v1.Post("/auth/verify", auth.CheckAuthHandler(queries, logger))
 
 	//schemas
 	schemas := v1.Group("/schemas")

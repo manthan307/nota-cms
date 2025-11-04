@@ -30,8 +30,8 @@ export function NavUser({
   user,
 }: {
   user: {
-    name: string;
     email: string;
+    role: string;
   };
 }) {
   const { isMobile } = useSidebar();
@@ -47,14 +47,16 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
-                  src={`https://api.dicebear.com/9.x/initials/svg?seed=${user.name}&backgroundColor[]`}
-                  alt={user.name}
+                  src={`https://api.dicebear.com/9.x/initials/svg?seed=${user.email}&backgroundColor[]`}
+                  alt={user.email}
                 />
                 <AvatarFallback className="rounded-lg">CN</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {user.role}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -69,14 +71,16 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage
-                    src={`https://api.dicebear.com/9.x/initials/svg?seed=${user.name}&backgroundColor[]`}
-                    alt={user.name}
+                    src={`https://api.dicebear.com/9.x/initials/svg?seed=${user.email}&backgroundColor[]`}
+                    alt={user.email}
                   />
                   <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {user.role}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>

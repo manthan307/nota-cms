@@ -1,16 +1,6 @@
 "use client";
 
 import * as React from "react";
-import {
-  AudioWaveform,
-  FileCode2,
-  Home,
-  Image,
-  Inbox,
-  Search,
-  Sparkles,
-  User,
-} from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { Header } from "@/components/navheader";
@@ -21,30 +11,24 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { NavUser } from "./nav-user";
+import { LucideIcon } from "lucide-react";
 
-const data = {
-  name: "Nota CMS",
-  logo: AudioWaveform,
-  navMain: [
-    {
-      title: "Schema",
-      url: "#",
-      icon: FileCode2,
-    },
-    {
-      title: "Content",
-      url: "#",
-      icon: Inbox,
-    },
-    {
-      title: "Users",
-      url: "#",
-      icon: User,
-    },
-  ],
-};
-
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  user,
+  data,
+  ...props
+}: {
+  user: { email: string; role: string };
+  data: {
+    name: string;
+    logo: React.ElementType;
+    navMain: {
+      title: string;
+      url: string;
+      icon: LucideIcon;
+    }[];
+  };
+} & React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar
       variant="inset"
@@ -59,12 +43,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
       </div>
       <SidebarFooter>
-        <NavUser
-          user={{
-            name: "Manthan Patel",
-            email: "pmanthan549@gmail.com",
-          }}
-        />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

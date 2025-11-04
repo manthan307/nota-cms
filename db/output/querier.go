@@ -28,6 +28,7 @@ type Querier interface {
 	GetSchemaByID(ctx context.Context, id uuid.UUID) (Schema, error)
 	GetSchemaByName(ctx context.Context, name string) (Schema, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	ListMedia(ctx context.Context) ([]Medium, error)
 	ListSchemas(ctx context.Context) ([]Schema, error)
 	ListUsers(ctx context.Context) ([]User, error)
