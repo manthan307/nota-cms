@@ -11,3 +11,5 @@ To run this project you need go@1.25.1 and docker. Then run following command in
 docker compose up
 go run .
 ```
+
+REMEMBER: make .env file in root with variable shown in .env.example without it will not run
