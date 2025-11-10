@@ -1,30 +1,11 @@
 "use client";
 import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/context/auth";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import {
-  AudioWaveform,
-  FileCode2,
-  Home,
-  Inbox,
-  Plus,
-  User,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AudioWaveform, FileCode2, Home, Inbox, User } from "lucide-react";
 
 const data = {
   name: "Nota CMS",
@@ -59,7 +40,6 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathName = usePathname();
   const { user, loading } = useAuth();
 
   useEffect(() => {
@@ -82,30 +62,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar user={user} data={data} />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2">
-          <div className="flex flex-1 items-center gap-2 px-3">
-            <SidebarTrigger />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="line-clamp-1">
-                    {data.navMain.find((v) => v.url === pathName)?.title || ""}
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <Button className="mx-8 self-center">
-            <Plus /> Create
-          </Button>
-        </header>
-        {children}
-      </SidebarInset>
+      <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
 }

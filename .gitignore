@@ -33,7 +33,6 @@ Thumbs.db
 
 # Environment files
 .env
-.env.*
 
 #sqlc files
 sqlc.exe
