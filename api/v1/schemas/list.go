@@ -8,7 +8,6 @@ import (
 
 func ListSchemas(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Use the request context (helps with cancellation, tracing, etc.)
 		ctx := c.Context()
 
 		schemas, err := queries.ListSchemas(ctx)

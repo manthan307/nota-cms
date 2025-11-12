@@ -32,7 +32,11 @@ export default function SchemaLayout({
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <SchemaCreateDialog />
+        <SchemaCreateDialog>
+          <Button variant="outline">
+            <Plus /> Create
+          </Button>
+        </SchemaCreateDialog>
       </header>
       {children}
     </>

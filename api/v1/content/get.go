@@ -53,7 +53,6 @@ func GetAllContentsBySchemaHandler(queries *db.Queries, logger *zap.Logger, publ
 		SchemaName := c.Params("schema_name")
 		schema, err := queries.GetSchemaByName(c.Context(), SchemaName)
 		if err != nil {
-			logger.Error("Error fetching schema by name", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error fetching schema",
 			})

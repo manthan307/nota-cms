@@ -1,3 +1,13 @@
+// Send post request on the url /api/vi/schema/create with body like below:
+// {
+// 	"name":"schemaName",
+// 	"definition":[
+//   { "name": "title", "type": "text", "isRequired": true },
+//   { "name": "views", "type": "number" },
+//   { "name": "thumbnail", "type": "image" }
+// ]
+// }
+
 package schemasRoutes
 
 import (
@@ -52,7 +62,7 @@ func SchemasCreateHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not create schema"})
 		}
 
-		return c.JSON(fiber.Map{
+		return c.Status(200).JSON(fiber.Map{
 			"id":         schema.ID,
 			"name":       schema.Name,
 			"createdBy":  schema.CreatedBy,

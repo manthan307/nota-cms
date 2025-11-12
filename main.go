@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/manthan307/nota-cms/api"
@@ -24,13 +22,9 @@ func main() {
 			logger.InitLogger,
 			postgres.Connect,
 			func(pool *pgxpool.Pool) *db.Queries {
-				ctx := context.Background()
-				conn, err := pool.Acquire(ctx)
-				if err != nil {
-					panic(err)
-				}
-				return db.New(conn.Conn())
+				return db.New(pool)
 			},
+
 			minio_pkg.InitS3,
 			api.StartServer,
 		),

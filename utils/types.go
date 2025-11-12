@@ -18,10 +18,21 @@ var Types = []string{
 	"richtext",
 }
 
+type Field struct {
+	Name       string      `json:"name"`
+	Type       interface{} `json:"type"` // can be string or []string
+	IsRequired bool        `json:"isRequired"`
+}
+
+// Validate schema definition syntax
 func CheckTypes(data []byte) (bool, error) {
-	var def map[string]interface{}
-	if err := json.Unmarshal(data, &def); err != nil {
-		return false, fmt.Errorf("invalid JSON: %w", err)
+	var fields []Field
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return false, fmt.Errorf("invalid JSON array: %w", err)
+	}
+
+	if len(fields) == 0 {
+		return false, fmt.Errorf("schema must contain at least one field")
 	}
 
 	typeSet := make(map[string]struct{}, len(Types))
@@ -29,48 +40,67 @@ func CheckTypes(data []byte) (bool, error) {
 		typeSet[t] = struct{}{}
 	}
 
-	for key, val := range def {
-		switch v := val.(type) {
+	for _, f := range fields {
+		if f.Name == "" {
+			return false, fmt.Errorf("each field must have a 'name'")
+		}
+
+		if f.Type == nil {
+			return false, fmt.Errorf("field %q missing 'type'", f.Name)
+		}
+
+		switch t := f.Type.(type) {
 		case string:
-			if _, ok := typeSet[v]; !ok {
-				return false, fmt.Errorf("invalid type for %q: %s", key, v)
+			if _, ok := typeSet[t]; !ok {
+				return false, fmt.Errorf("field %q: invalid type %q", f.Name, t)
 			}
 		case []interface{}:
-			for _, item := range v {
-				if s, ok := item.(string); ok {
-					if _, found := typeSet[s]; !found {
-						return false, fmt.Errorf("invalid type in array for %q: %s", key, s)
-					}
-				} else {
-					return false, fmt.Errorf("non-string value in array for %q", key)
+			for _, item := range t {
+				s, ok := item.(string)
+				if !ok {
+					return false, fmt.Errorf("field %q: non-string type in array", f.Name)
+				}
+				if _, found := typeSet[s]; !found {
+					return false, fmt.Errorf("field %q: invalid type in array %q", f.Name, s)
 				}
 			}
 		default:
-			return false, fmt.Errorf("invalid type for %q: %T", key, v)
+			return false, fmt.Errorf("field %q: type must be string or array", f.Name)
 		}
 	}
+
 	return true, nil
 }
 
+// Compare schema definition with actual data
 func CompareSchemaWithData(schemaDef []byte, data map[string]interface{}) (bool, error) {
-	var schema map[string]interface{}
-	if err := json.Unmarshal(schemaDef, &schema); err != nil {
-		return false, fmt.Errorf("invalid schema JSON: %w", err)
+	var fields []Field
+	if err := json.Unmarshal(schemaDef, &fields); err != nil {
+		return false, fmt.Errorf("invalid schema JSON array: %w", err)
 	}
 
-	for key, schemaVal := range schema {
-		val, exists := data[key]
+	fieldMap := make(map[string]Field)
+	for _, f := range fields {
+		fieldMap[f.Name] = f
+	}
+
+	for _, f := range fields {
+		val, exists := data[f.Name]
+
 		if !exists {
-			return false, fmt.Errorf("missing required field %q", key)
+			if f.IsRequired {
+				return false, fmt.Errorf("missing required field %q", f.Name)
+			}
+			continue
 		}
 
-		if err := matchType(schemaVal, val); err != nil {
-			return false, fmt.Errorf("field %q: %w", key, err)
+		if err := matchType(f.Type, val); err != nil {
+			return false, fmt.Errorf("field %q: %w", f.Name, err)
 		}
 	}
 
 	for key := range data {
-		if _, exists := schema[key]; !exists {
+		if _, exists := fieldMap[key]; !exists {
 			return false, fmt.Errorf("field %q not defined in schema", key)
 		}
 	}
@@ -78,6 +108,7 @@ func CompareSchemaWithData(schemaDef []byte, data map[string]interface{}) (bool,
 	return true, nil
 }
 
+// Match single field's type
 func matchType(schemaVal interface{}, value interface{}) error {
 	switch t := schemaVal.(type) {
 	case string:
@@ -107,6 +138,7 @@ func matchType(schemaVal interface{}, value interface{}) error {
 	return nil
 }
 
+// Type matching logic
 func isPrimitiveTypeMatching(expectedType string, value interface{}) bool {
 	switch expectedType {
 	case "text", "string", "richtext":
@@ -129,7 +161,6 @@ func isPrimitiveTypeMatching(expectedType string, value interface{}) bool {
 		if !ok {
 			return false
 		}
-		// Validate URL format for media types
 		u, err := url.ParseRequestURI(str)
 		return err == nil && u.Scheme != "" && u.Host != ""
 	default:

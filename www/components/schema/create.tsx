@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
 import {
   Table,
@@ -23,25 +23,34 @@ import {
   TableRow,
 } from "../ui/table";
 import { SelectType } from "./selectType";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { fetch } from "@/lib/instance";
+import { SchemaContext } from "@/context/schema";
 
-type FieldType = {
+export type FieldType = {
   name: string;
   type: string;
   isRequired: boolean;
 };
 
-export function SchemaCreateDialog() {
-  const [Fields, SetFields] = useState<FieldType[]>([]);
+export function SchemaCreateDialog({
+  name,
+  fields,
+  children,
+}: {
+  name?: string;
+  fields?: FieldType[];
+  children: React.ReactNode;
+}) {
+  const [Fields, SetFields] = useState<FieldType[]>(fields || []);
+  const [schemaName, setSchemaName] = useState<string>(name || "");
+  const [error, SetError] = useState<string>();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [open, setOpen] = useState(false);
+  const { addSchema, refreshSchemas } = useContext(SchemaContext);
 
   function AddField() {
-    const DefaultField: FieldType = {
-      name: "",
-      type: "",
-      isRequired: false,
-    };
-
-    SetFields((prev) => [...prev, DefaultField]);
+    SetFields((prev) => [...prev, { name: "", type: "", isRequired: false }]);
   }
 
   function UpdateField(index: number, key: keyof FieldType, value: any) {
@@ -54,19 +63,82 @@ export function SchemaCreateDialog() {
     SetFields((prev) => prev.filter((_, i) => i !== index));
   }
 
-  return (
-    <Dialog>
-      <form>
-        <DialogTrigger asChild>
-          <Button variant="outline">
-            <Plus /> Create
-          </Button>
-        </DialogTrigger>
+  function BuildSchema() {
+    if (schemaName.trim() === "") {
+      SetError("Please set schema name.");
+      return null;
+    }
 
-        <DialogContent className="max-w-[900px] w-full">
+    for (const field of Fields) {
+      if (field.name.trim() === "") {
+        SetError("Please set name for all fields.");
+        return null;
+      }
+      if (field.type.trim() === "") {
+        SetError("Please set type for all fields.");
+        return null;
+      }
+    }
+
+    SetError(undefined);
+    return Fields.map((field) => ({
+      name: field.name,
+      type: field.type,
+      isRequired: field.isRequired,
+    }));
+  }
+
+  async function HandleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const schema = BuildSchema();
+    if (!schema) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch.post("/api/v1/schemas/create", {
+        name: schemaName,
+        definition: schema,
+      });
+
+      if (res.status === 200) {
+        addSchema({ name: schemaName, definition: schema });
+        refreshSchemas();
+        setOpen(false); // ✅ close dialog
+      } else {
+        SetError(res.data?.error || "Failed to create schema.");
+      }
+    } catch (err) {
+      console.error("Failed to create schema:", err);
+      SetError("Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setSchemaName("");
+          SetFields([]);
+          SetError(undefined);
+        }
+      }}
+    >
+      <DialogTrigger asChild>{children}</DialogTrigger>
+
+      <DialogContent className="max-w-[900px] w-full">
+        <form onSubmit={HandleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              <input placeholder="Enter Schema Name" className="outline-0" />
+              <input
+                placeholder="Enter Schema Name"
+                className="outline-0 w-full"
+                value={schemaName}
+                onChange={(e) => setSchemaName(e.target.value)}
+              />
             </DialogTitle>
             <DialogDescription>
               Add fields you need in your schema.
@@ -85,11 +157,10 @@ export function SchemaCreateDialog() {
               </TableHeader>
 
               <TableBody>
-                {/* Static ID Row */}
                 <TableRow>
                   <TableCell>Id</TableCell>
                   <TableCell>
-                    <SelectType name="Type" defaultValue="UUID" disable />
+                    <SelectType name="Type" defaultValue="UUID" disabled />
                   </TableCell>
                   <TableCell>
                     <Checkbox defaultChecked disabled />
@@ -101,12 +172,11 @@ export function SchemaCreateDialog() {
                   </TableCell>
                 </TableRow>
 
-                {/* Dynamic Fields */}
                 {Fields.map((value, index) => (
                   <TableRow key={index}>
                     <TableCell>
                       <input
-                        className="outline-none"
+                        className="outline-none w-full"
                         value={value.name}
                         onChange={(e) =>
                           UpdateField(index, "name", e.target.value)
@@ -116,7 +186,12 @@ export function SchemaCreateDialog() {
                     </TableCell>
 
                     <TableCell>
-                      <SelectType name="Type" defaultValue={value.type} />
+                      <SelectType
+                        name="Type"
+                        defaultValue={value.type}
+                        update={UpdateField}
+                        index={index}
+                      />
                     </TableCell>
 
                     <TableCell>
@@ -141,7 +216,9 @@ export function SchemaCreateDialog() {
               </TableBody>
             </Table>
 
-            <div className="flex justify-end">
+            {error && <p className="text-red-500">{error}</p>}
+
+            <div className="flex justify-end my-5">
               <Button variant="outline" type="button" onClick={AddField}>
                 <Plus /> Add Field
               </Button>
@@ -150,12 +227,25 @@ export function SchemaCreateDialog() {
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" type="button" disabled={loading}>
+                Cancel
+              </Button>
             </DialogClose>
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {name == undefined ? "Creating..." : "Updating..."}
+                </>
+              ) : name == undefined ? (
+                "Create"
+              ) : (
+                "Update"
+              )}
+            </Button>
           </DialogFooter>
-        </DialogContent>
-      </form>
+        </form>
+      </DialogContent>
     </Dialog>
   );
 }
