@@ -17,8 +17,7 @@ WHERE deleted_at IS NULL
 ORDER BY id;
 
 -- name: DeleteSchema :exec
-UPDATE schemas
-SET deleted_at = now()
+DELETE FROM schemas
 WHERE id = $1;
 
 -- name: UpdateSchema :one

@@ -19,15 +19,26 @@ services:
       - "9000:9000"
       - "9001:9001"
 
-  # app:
-  #   build: .
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "${PORT:-8000}:8000"
-  #   depends_on:
-  #     - db
-  #     - minio
+  api:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - minio
+
+  frontend:
+    build: ./www
+    environment:
+      - NEXT_PUBLIC_API_URL=http://host.docker.internal:8000
+    ports:
+      - "3000:3000" # frontend served by Nginx → exposed on port 3000
+    depends_on:
+      - api
+      - db
+      - minio
 
 volumes:
   db_data:

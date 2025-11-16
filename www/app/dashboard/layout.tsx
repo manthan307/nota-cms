@@ -11,11 +11,11 @@ const data = {
   name: "Nota CMS",
   logo: AudioWaveform,
   navMain: [
-    {
-      title: "Home",
-      url: "/dashboard",
-      icon: Home,
-    },
+    // {
+    //   title: "Home",
+    //   url: "/dashboard",
+    //   icon: Home,
+    // },
     {
       title: "Schema",
       url: "/dashboard/schema",

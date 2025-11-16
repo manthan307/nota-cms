@@ -59,6 +59,7 @@ func SchemasCreateHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler
 		})
 
 		if err != nil {
+			logger.Error("could not create schema", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not create schema"})
 		}
 

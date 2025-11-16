@@ -22,3 +22,8 @@ UPDATE media
 SET key = $2, url = $3, bucket = $4, type = $5, updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
+
+-- name: GetMediaByURL :one
+SELECT * FROM media
+WHERE url = $1 AND deleted_at IS NULL
+ORDER BY created_at DESC;

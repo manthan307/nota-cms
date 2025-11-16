@@ -21,13 +21,13 @@ import { ContentContext } from "@/context/contents";
 
 export function ContentCreateDialog({ schema }: { schema: any }) {
   const { addContent, refreshContents } = useContext(ContentContext);
+
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [published, setPublished] = useState(false);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  // handle case where schema is undefined or malformed
   if (!schema || !Array.isArray(schema.Definition)) {
     return (
       <Button variant="outline" disabled>
@@ -36,16 +36,40 @@ export function ContentCreateDialog({ schema }: { schema: any }) {
     );
   }
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: any) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+  const uploadMedia = async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+
+    const res = await fetch.post("/api/v1/media/upload", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    return res.data.url;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFile = async (field: string, e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      const url = await uploadMedia(file);
+      handleChange(field, url);
+    } catch {
+      setError("Failed to upload media.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    // Required fields validation
     for (const field of schema.Definition) {
-      if (field.isRequired && !formData[field.name]?.trim()) {
+      if (field.isRequired && !formData[field.name]) {
         setError(`Field "${field.name}" is required.`);
         return;
       }
@@ -62,20 +86,15 @@ export function ContentCreateDialog({ schema }: { schema: any }) {
       };
 
       const res = await fetch.post("/api/v1/content/create", body);
+      const created = res.data?.data || res.data;
 
-      if (res.status === 200 || res.status === 201) {
-        // support either shape: { data: { ... } } or raw
-        const created = res.data?.data || res.data;
-        addContent(created);
-        refreshContents(schema.Name);
-        setFormData({});
-        setPublished(false);
-        setOpen(false);
-      } else {
-        setError(res.data?.error || "Failed to create content.");
-      }
-    } catch (err) {
-      console.error("Create content error:", err);
+      addContent(created);
+      refreshContents(schema.Name);
+
+      setFormData({});
+      setPublished(false);
+      setOpen(false);
+    } catch {
       setError("Something went wrong while creating content.");
     } finally {
       setLoading(false);
@@ -100,26 +119,106 @@ export function ContentCreateDialog({ schema }: { schema: any }) {
           </DialogHeader>
 
           <div className="grid gap-4 mt-4">
-            {schema.Definition.map((field: any, idx: number) => (
-              <div key={idx}>
-                <label className="block text-sm font-medium mb-1">
-                  {field.name}{" "}
-                  {field.isRequired && <span className="text-red-500">*</span>}
-                </label>
-                <Input
-                  type={
-                    field.type === "number"
-                      ? "number"
-                      : field.type === "date"
-                      ? "date"
-                      : "text"
-                  }
-                  value={formData[field.name] || ""}
-                  onChange={(e) => handleChange(field.name, e.target.value)}
-                  placeholder={`Enter ${field.name}`}
-                />
-              </div>
-            ))}
+            {schema.Definition.map((field: any, idx: number) => {
+              const value = formData[field.name] || "";
+
+              return (
+                <div key={idx}>
+                  <label className="block text-sm font-medium mb-1">
+                    {field.name}
+                    {field.isRequired && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
+                  </label>
+
+                  {field.type === "text" && (
+                    <Input
+                      value={value}
+                      onChange={(e) => handleChange(field.name, e.target.value)}
+                    />
+                  )}
+
+                  {field.type === "number" && (
+                    <Input
+                      type="number"
+                      value={value}
+                      onChange={(e) => handleChange(field.name, e.target.value)}
+                    />
+                  )}
+
+                  {field.type === "date" && (
+                    <Input
+                      type="date"
+                      value={value}
+                      onChange={(e) => handleChange(field.name, e.target.value)}
+                    />
+                  )}
+
+                  {field.type === "textarea" && (
+                    <textarea
+                      className="border rounded p-2 w-full"
+                      rows={4}
+                      value={value}
+                      onChange={(e) => handleChange(field.name, e.target.value)}
+                    />
+                  )}
+
+                  {field.type === "boolean" && (
+                    <Switch
+                      checked={value === "true" || value === true}
+                      onCheckedChange={(v) => handleChange(field.name, `${v}`)}
+                    />
+                  )}
+
+                  {(field.type === "image" ||
+                    field.type === "video" ||
+                    field.type === "file") && (
+                    <div>
+                      <Input
+                        type="file"
+                        accept={
+                          field.type === "image"
+                            ? "image/*"
+                            : field.type === "video"
+                            ? "video/*"
+                            : undefined
+                        }
+                        onChange={(e) => handleFile(field.name, e)}
+                      />
+
+                      {value && typeof value === "string" && (
+                        <>
+                          {field.type === "image" && (
+                            <img
+                              src={value}
+                              className="mt-2 h-24 w-auto rounded border"
+                            />
+                          )}
+
+                          {field.type === "video" && (
+                            <video
+                              src={value}
+                              controls
+                              className="mt-2 h-32 w-auto rounded border"
+                            />
+                          )}
+
+                          {field.type === "file" && (
+                            <a
+                              href={value}
+                              target="_blank"
+                              className="text-blue-600 underline mt-2 block"
+                            >
+                              View file
+                            </a>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             <div className="flex items-center gap-2 mt-3">
               <Switch

@@ -7,7 +7,13 @@ RETURNING *;
 SELECT * FROM contents
 WHERE schema_id = $1
 AND deleted_at IS NULL
-AND published = true
+AND published = $2
+ORDER BY created_at DESC;
+
+-- name: GetAllContentsBySchema :many
+SELECT * FROM contents
+WHERE schema_id = $1
+AND deleted_at IS NULL
 ORDER BY created_at DESC;
 
 -- name: DeleteContent :exec
@@ -21,17 +27,15 @@ WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: UpdateContent :one
 UPDATE contents
-SET data = $2, updated_at = now()
-WHERE id = $1 AND deleted_at IS NULL
+SET 
+  data = $2,
+  published = $3,
+  updated_at = NOW()
+WHERE id = $1
 RETURNING *;
+
 
 -- name: GetAllContents :many
 SELECT * FROM contents
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC;
-
--- name: SetContentPublished :one
-UPDATE contents
-SET published = $2, updated_at = now()
-WHERE id = $1 AND deleted_at IS NULL
-RETURNING *;

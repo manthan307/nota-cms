@@ -75,7 +75,9 @@ func CreateContentHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler
 			"id":        content.ID,
 			"schemaID":  content.SchemaID,
 			"data":      content.Data,
+			"published": content.Published,
 			"createdAt": content.CreatedAt,
+			"updateAt":  content.UpdatedAt,
 		})
 	}
 }

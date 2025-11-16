@@ -1,3 +1,7 @@
 export default function PageUsersDashboard() {
-  return <div>Schema Dashboard Page</div>;
+  return (
+    <div className="h-full w-full flex justify-center items-center">
+      Too lazy to implimant this.
+    </div>
+  );
 }

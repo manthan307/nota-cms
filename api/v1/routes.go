@@ -33,8 +33,8 @@ func RegisterRoutes(app *fiber.App, queries *db.Queries, logger *zap.Logger, min
 	contentRoute.Post("/create", auth.ProtectedRoute(logger, queries, "editor"), content.CreateContentHandler(queries, logger))
 	contentRoute.Delete("/delete/:id", auth.ProtectedRoute(logger, queries, "editor"), content.DeleteContentHandler(queries, logger))
 	contentRoute.Get("/get/:id", content.GetContentHandler(queries, logger))
-	contentRoute.Get("/get_all/:schema_name", content.GetAllContentsBySchemaHandler(queries, logger, true))
-	//TODO: make update content path
+	contentRoute.Get("/get_all/:schema_name", content.GetAllContentsBySchemaHandler(queries, logger))
+	contentRoute.Post("/update", auth.ProtectedRoute(logger, queries, "editor"), content.UpdateContentHandler(queries, logger))
 
 	//media
 	mediaRoute := v1.Group("/media")

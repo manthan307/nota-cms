@@ -20,24 +20,21 @@ import (
 
 func UploadMediaHandler(queries *db.Queries, logger *zap.Logger, minioClient *minio.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		//get user id
-		userID := c.Locals("claims").(jwt.MapClaims)["user_id"].(string)
-		UUIDuserID, err := uuid.Parse(userID)
+		claims := c.Locals("claims").(jwt.MapClaims)
+		userID := claims["user_id"].(string)
+
+		uid, err := uuid.Parse(userID)
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
 		}
-		pgUserId := pgtype.UUID{
-			Bytes: UUIDuserID,
-			Valid: true,
-		}
 
-		// Parse file from form-data
+		pgUserID := pgtype.UUID{Bytes: uid, Valid: true}
+
 		fileHeader, err := c.FormFile("file")
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "file is required"})
 		}
 
-		// Open file
 		file, err := fileHeader.Open()
 		if err != nil {
 			logger.Error("Error opening uploaded file", zap.Error(err))
@@ -49,14 +46,14 @@ func UploadMediaHandler(queries *db.Queries, logger *zap.Logger, minioClient *mi
 		if bucket == "" {
 			bucket = "media"
 		}
+
 		ctx := context.Background()
 
-		// Ensure bucket exists
 		exists, err := minioClient.BucketExists(ctx, bucket)
 		if err != nil {
-			fmt.Println(err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed checking bucket"})
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "bucket check failed"})
 		}
+
 		if !exists {
 			err = minioClient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{})
 			if err != nil {
@@ -64,33 +61,35 @@ func UploadMediaHandler(queries *db.Queries, logger *zap.Logger, minioClient *mi
 			}
 		}
 
-		// Generate unique object key
 		objectKey := fmt.Sprintf("%s%s", uuid.New().String(), filepath.Ext(fileHeader.Filename))
 
-		// Upload file to MinIO
 		uploadInfo, err := minioClient.PutObject(
 			ctx,
 			bucket,
 			objectKey,
 			file,
 			fileHeader.Size,
-			minio.PutObjectOptions{ContentType: fileHeader.Header.Get("Content-Type")},
+			minio.PutObjectOptions{
+				ContentType: fileHeader.Header.Get("Content-Type"),
+			},
 		)
 		if err != nil {
-			logger.Error("Error uploading file to MinIO", zap.Error(err))
+			logger.Error("Error uploading to MinIO", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "upload failed"})
 		}
 
-		// Construct URL
-		fileURL := fmt.Sprintf("http://%s/%s/%s", os.Getenv("MINIO_ENDPOINT"), bucket, objectKey)
+		fileURL := fmt.Sprintf("http://%s/%s/%s",
+			os.Getenv("MINIO_ENDPOINT"),
+			bucket,
+			objectKey,
+		)
 
-		// Save metadata in DB
 		media, err := queries.CreateMedia(ctx, db.CreateMediaParams{
 			Key:        objectKey,
 			Url:        fileURL,
 			Bucket:     bucket,
-			Type:       detectFileType(fileHeader), // image/video/file
-			UploadedBy: pgUserId,
+			Type:       detectFileType(fileHeader),
+			UploadedBy: pgUserID,
 		})
 		if err != nil {
 			logger.Error("Error saving media to DB", zap.Error(err))
@@ -103,24 +102,21 @@ func UploadMediaHandler(queries *db.Queries, logger *zap.Logger, minioClient *mi
 			"url":       media.Url,
 			"type":      media.Type,
 			"bucket":    media.Bucket,
-			"uploaded":  media.UploadedBy,
+			"uploaded":  media.UploadedBy.Bytes, // FIXED
 			"size":      uploadInfo.Size,
 			"createdAt": time.Now(),
 		})
 	}
 }
 
-// simple MIME type detection
 func detectFileType(fileHeader *multipart.FileHeader) string {
-	contentType := fileHeader.Header.Get("Content-Type")
-	if contentType == "" {
+	t := fileHeader.Header.Get("Content-Type")
+	switch {
+	case strings.HasPrefix(t, "image/"):
+		return "image"
+	case strings.HasPrefix(t, "video/"):
+		return "video"
+	default:
 		return "file"
 	}
-	if strings.HasPrefix(contentType, "image/") {
-		return "image"
-	}
-	if strings.HasPrefix(contentType, "video/") {
-		return "video"
-	}
-	return "file"
 }

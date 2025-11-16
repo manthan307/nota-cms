@@ -23,7 +23,7 @@ func DeleteMediaHandler(queries *db.Queries, logger *zap.Logger, minioClient *mi
 
 		// Delete file path from request body
 		type DeleteMediaRequest struct {
-			FilePath string `json:"file_path"`
+			FileURL string `json:"file_url"`
 		}
 		var req DeleteMediaRequest
 		if err := c.BodyParser(&req); err != nil {
@@ -35,8 +35,15 @@ func DeleteMediaHandler(queries *db.Queries, logger *zap.Logger, minioClient *mi
 			bucket = "media"
 		}
 		ctx := context.Background()
+
+		Media, err := queries.GetMediaByURL(c.Context(), req.FileURL)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"err": "Can't get Media.",
+			})
+		}
 		// Delete the file from MinIO
-		err = minioClient.RemoveObject(ctx, bucket, req.FilePath, minio.RemoveObjectOptions{})
+		err = minioClient.RemoveObject(ctx, bucket, Media.Key, minio.RemoveObjectOptions{})
 		if err != nil {
 			logger.Error("Error deleting file from MinIO", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete file"})

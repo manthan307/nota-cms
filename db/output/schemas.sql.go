@@ -41,8 +41,7 @@ func (q *Queries) CreateSchema(ctx context.Context, arg CreateSchemaParams) (Sch
 }
 
 const deleteSchema = `-- name: DeleteSchema :exec
-UPDATE schemas
-SET deleted_at = now()
+DELETE FROM schemas
 WHERE id = $1
 `
 

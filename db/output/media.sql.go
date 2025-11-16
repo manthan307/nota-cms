@@ -82,6 +82,29 @@ func (q *Queries) GetMediaByID(ctx context.Context, id uuid.UUID) (Medium, error
 	return i, err
 }
 
+const getMediaByURL = `-- name: GetMediaByURL :one
+SELECT id, key, url, bucket, type, uploaded_by, created_at, updated_at, deleted_at FROM media
+WHERE url = $1 AND deleted_at IS NULL
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetMediaByURL(ctx context.Context, url string) (Medium, error) {
+	row := q.db.QueryRow(ctx, getMediaByURL, url)
+	var i Medium
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.Url,
+		&i.Bucket,
+		&i.Type,
+		&i.UploadedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const listMedia = `-- name: ListMedia :many
 SELECT id, key, url, bucket, type, uploaded_by, created_at, updated_at, deleted_at FROM media
 WHERE deleted_at IS NULL

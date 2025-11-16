@@ -25,6 +25,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { toast } from "sonner";
 
 export function NavUser({
   user,
@@ -92,7 +93,11 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(v: any) => {
+                toast.warning("too lazy to implement this too.");
+              }}
+            >
               <LogOut />
               Log out
             </DropdownMenuItem>

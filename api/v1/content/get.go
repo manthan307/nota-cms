@@ -48,41 +48,85 @@ func GetContentHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 	}
 }
 
-func GetAllContentsBySchemaHandler(queries *db.Queries, logger *zap.Logger, published bool) fiber.Handler {
+func GetAllContentsBySchemaHandler(queries *db.Queries, logger *zap.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		SchemaName := c.Params("schema_name")
-		schema, err := queries.GetSchemaByName(c.Context(), SchemaName)
+		schemaName := c.Params("schema_name")
+
+		// Fetch schema
+		schema, err := queries.GetSchemaByName(c.Context(), schemaName)
 		if err != nil {
+			logger.Error("Error fetching schema", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error fetching schema",
 			})
 		}
-		pgID := pgtype.UUID{
-			Bytes: schema.ID,
-			Valid: true,
+
+		// Check published query param: true | false | all
+		p := c.Query("published", "all")
+
+		var (
+			contents []db.Content
+		)
+
+		pgID := pgtype.UUID{Bytes: schema.ID, Valid: true}
+
+		switch p {
+		case "true":
+			b := true
+			contents, err = queries.GetContentsBySchema(
+				c.Context(),
+				db.GetContentsBySchemaParams{
+					SchemaID: pgID,
+					Published: pgtype.Bool{
+						Bool:  b,
+						Valid: true,
+					},
+				},
+			)
+		case "false":
+			b := false
+			contents, err = queries.GetContentsBySchema(
+				c.Context(),
+				db.GetContentsBySchemaParams{
+					SchemaID: pgID,
+					Published: pgtype.Bool{
+						Bool:  b,
+						Valid: true,
+					},
+				},
+			)
+		default: // "all"
+			contents, err = queries.GetAllContentsBySchema(c.Context(), pgID)
 		}
-		contents, err := queries.GetContentsBySchema(c.Context(), pgID)
+
 		if err != nil {
-			logger.Error("Error fetching all contents", zap.Error(err))
+			logger.Error("Error fetching contents", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Error fetching contents",
 			})
 		}
+
+		// Formatting output
 		var result []map[string]interface{}
 		for _, content := range contents {
 			var data map[string]interface{}
 			if err := json.Unmarshal(content.Data, &data); err != nil {
-				logger.Error("Error unmarshalling content data", zap.Error(err))
+				logger.Warn("Invalid JSON in content.Data", zap.Error(err))
 				continue
 			}
+
 			item := map[string]interface{}{
 				"id":        content.ID,
 				"schemaID":  content.SchemaID,
 				"data":      data,
+				"published": content.Published.Bool,
 				"createdAt": content.CreatedAt,
+				"updatedAt": content.UpdatedAt,
 			}
+
 			result = append(result, item)
 		}
-		return c.Status(fiber.StatusOK).JSON(result)
+
+		return c.JSON(result)
 	}
 }
